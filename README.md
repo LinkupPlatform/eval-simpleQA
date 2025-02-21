@@ -1,4 +1,4 @@
-# QA Policy Evaluator
+# SimpleQA Evaluator
 
 A tool for evaluating and comparing different Question Answering (QA) policies on OpenAI's SimpleQA benchmark, measuring metrics like f-score, accuracy, and latency.
 
