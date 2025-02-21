@@ -4,7 +4,7 @@ A tool for evaluating and comparing different Question Answering (QA) policies o
 
 ## Features
 
-The evaluator provides comprehensive testing capabilities for AI search engines including Linkup, Linkup Standard, and Tavily APIs. It supports both single-policy evaluation and head-to-head comparisons, with built-in async processing and progress tracking.
+The evaluator provides comprehensive testing capabilities for AI search engines including Linkup Deep, Linkup Standard, and Tavily APIs. It supports both single-policy evaluation and head-to-head comparisons, with built-in async processing and progress tracking.
 
 ## Setup
 
