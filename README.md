@@ -68,7 +68,7 @@ Here's a comparison of different QA policies on the SimpleQA benchmark:
 
 | Policy | F-Score  | Accuracy | Attempt Rate | Avg Latency (s) |
 |--------|----------|----------|--------------|-----------------|
-| Linkup (Deep) | 0.901 | 0.898 | 99.5% | 7.19 |
+| Linkup (Deep) | 0.910 | 8.23 | 99.5% | 8.23 |
 | Linkup (Standard) | 0.850 | 0.837 | 96.8% | 4.10 |
 | Tavily | 0.728 | 0.726 | 99.6% | 2.92 |
 
