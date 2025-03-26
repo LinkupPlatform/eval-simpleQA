@@ -11,7 +11,7 @@ The evaluator provides comprehensive testing capabilities for AI search engines 
 1. Install dependencies:
 
 ```bash
-pip install pandas tqdm python-dotenv
+pip install pandas tqdm python-dotenv linkup-sdk tavily-python openai
 ```
 
 2. Create a `.env` file with your API keys:
