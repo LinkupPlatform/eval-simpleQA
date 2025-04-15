@@ -32,7 +32,7 @@ def get_data():
     return df
 
 
-def sample_questions(n: int = None):
+def sample_questions(n: int | None = None):
     df = get_data()
     # If n is None, return the complete dataset
     return df.sample(n) if n is not None else df
@@ -173,7 +173,7 @@ def calculate_metrics(results: list) -> Dict[str, float]:
     return metrics
 
 
-def run_evaluation(policy_type: str, questions_df: pd.DataFrame) -> Dict[str, float]:
+async def run_evaluation(policy_type: str, questions_df: pd.DataFrame) -> Dict[str, float]:
     """Run evaluation for a single policy type.
 
     Args:
@@ -188,7 +188,7 @@ def run_evaluation(policy_type: str, questions_df: pd.DataFrame) -> Dict[str, fl
 
     for problem, answer in zip(questions_df["problem"], questions_df["answer"]):
         start_time = datetime.now()
-        predicted_answer, policy_state = run_policy_async(problem, policy_type)
+        predicted_answer, policy_state = await run_policy_async(problem, policy_type)
         latency = (datetime.now() - start_time).total_seconds()
 
         print(f"Question: {problem}")
@@ -208,7 +208,7 @@ def run_evaluation(policy_type: str, questions_df: pd.DataFrame) -> Dict[str, fl
     return metrics
 
 
-def print_metrics(metrics: Dict[str, float], policy_name: str = None):
+def print_metrics(metrics: Dict[str, float], policy_name: str | None = None):
     """Print metrics in a formatted way."""
     if policy_name:
         print(f"\nMETRICS FOR {policy_name.upper()}")
@@ -221,15 +221,15 @@ def print_metrics(metrics: Dict[str, float], policy_name: str = None):
     print(f"Not Attempted: {metrics['is_not_attempted']:.3f}")
 
 
-def compare_policies(policy1: str, policy2: str, num_samples: int):
+async def compare_policies(policy1: str, policy2: str, num_samples: int):
     """Compare two policies on the same set of questions."""
     print(f"\nComparing {policy1.upper()} vs {policy2.upper()} on {num_samples} samples...")
 
     # Use the same samples for both policies
     questions_df = sample_questions(num_samples)
 
-    metrics1 = run_evaluation(policy1, questions_df)
-    metrics2 = run_evaluation(policy2, questions_df)
+    metrics1 = await run_evaluation(policy1, questions_df)
+    metrics2 = await run_evaluation(policy2, questions_df)
 
     print("\nCOMPARISON RESULTS")
     print("=" * 50)
