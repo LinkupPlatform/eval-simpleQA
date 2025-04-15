@@ -32,10 +32,9 @@ def get_data():
     return df
 
 
-def sample_questions(n: int | None = None):
+def sample_questions(n: int | None = None, seed: int = 42) -> pd.DataFrame:
     df = get_data()
-    # If n is None, return the complete dataset
-    return df.sample(n) if n is not None else df
+    return df.sample(n=n, random_state=seed) if n is not None else df
 
 
 # Concurrency settings
@@ -385,9 +384,9 @@ def analyze_results(results_file: Path):
     return df
 
 
-async def compare_policies_async(policy1: str, policy2: str, num_samples: int):
+async def compare_policies_async(policy1: str, policy2: str, num_samples: int, seed: int) -> None:
     """Compare two policies on the same set of questions."""
-    questions_df = sample_questions(num_samples)
+    questions_df = sample_questions(n=num_samples, seed=seed)
 
     print(f"\nEvaluating {policy1}...")
     results1 = await evaluate_questions_async(questions_df, policy1)
@@ -470,6 +469,12 @@ if __name__ == "__main__":
         type=int,
         help="Number of samples to evaluate (if not specified, uses complete dataset)",
     )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="Random seed for sampling questions",
+    )
     parser.add_argument("--analyze", type=str, help="Path to results file to analyze")
 
     args = parser.parse_args()
@@ -479,14 +484,19 @@ if __name__ == "__main__":
             if args.mode == "evaluate":
                 if not args.policy1:
                     parser.error("--policy1 is required for evaluate mode")
-                questions_df = sample_questions(args.num_samples)
+                questions_df = sample_questions(n=args.num_samples, seed=args.seed)
                 results = await evaluate_questions_async(questions_df, args.policy1)
                 metrics = calculate_metrics(results)
                 print_metrics(metrics, args.policy1)
             else:  # compare mode
                 if not args.policy1 or not args.policy2:
                     parser.error("Both --policy1 and --policy2 are required for compare mode")
-                await compare_policies_async(args.policy1, args.policy2, args.num_samples)
+                await compare_policies_async(
+                    policy1=args.policy1,
+                    policy2=args.policy2,
+                    num_samples=args.num_samples,
+                    seed=args.seed,
+                )
         except KeyboardInterrupt:
             print("\nProcess interrupted by user. Progress has been saved.")
             sys.exit(1)
