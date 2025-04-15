@@ -52,57 +52,69 @@ def print_log(policy_type: str, message: str):
         print(f"[{policy_type}] {message}")
 
 
-async def run_linkup_policy(question: str) -> Tuple[str, None]:
+async def run_linkup_policy(
+    question: str,
+    policy_args: dict[str, Any] | None,
+) -> Tuple[str, None]:
     """Run linkup policy in a thread to avoid blocking."""
     loop = asyncio.get_event_loop()
     with ThreadPoolExecutor() as pool:
         result = await loop.run_in_executor(
             pool,
-            lambda: LinkupClient(api_key=linkup_api_key)
+            lambda: LinkupClient(api_key=linkup_api_key, **policy_args or dict())
             .search(question, depth="deep", output_type="sourcedAnswer")
             .answer,
         )
         return result, None
 
 
-async def run_linkup_standard_policy(question: str) -> Tuple[str, None]:
+async def run_linkup_standard_policy(
+    question: str,
+    policy_args: dict[str, Any] | None,
+) -> Tuple[str, None]:
     """Run linkup policy in a thread to avoid blocking."""
     loop = asyncio.get_event_loop()
     with ThreadPoolExecutor() as pool:
         result = await loop.run_in_executor(
             pool,
-            lambda: LinkupClient(api_key=linkup_api_key)
+            lambda: LinkupClient(api_key=linkup_api_key, **policy_args or dict())
             .search(question, depth="standard", output_type="sourcedAnswer")
             .answer,
         )
         return result, None
 
 
-async def run_tavily_policy(question: str) -> Tuple[str, None]:
+async def run_tavily_policy(
+    question: str,
+    policy_args: dict[str, Any] | None,
+) -> Tuple[str, None]:
     """Run tavily policy in a thread to avoid blocking."""
     loop = asyncio.get_event_loop()
     with ThreadPoolExecutor() as pool:
         result = await loop.run_in_executor(
             pool,
-            lambda: TavilyClient(api_key=tavily_api_key).search(
+            lambda: TavilyClient(api_key=tavily_api_key, **policy_args or dict()).search(
                 question, search_depth="advanced", include_answer=True
             )["answer"],
         )
         return result, None
 
 
-async def run_policy_async(question: str, policy_type: str = "linkup") -> Tuple[str, Optional[Any]]:
+async def run_policy_async(
+    question: str,
+    policy_type: str = "linkup",
+    policy_args: dict[str, Any] | None = None,
+) -> Tuple[str, Optional[Any]]:
     """Async version of run_policy."""
     policy_handlers = {
         "tavily": run_tavily_policy,
         "linkup": run_linkup_policy,
         "linkup_standard": run_linkup_standard_policy,
     }
-
     if policy_type not in policy_handlers:
         raise ValueError(f"Unknown policy type: {policy_type}")
 
-    return await policy_handlers[policy_type](question)
+    return await policy_handlers[policy_type](question=question, policy_args=policy_args)
 
 
 def save_trace(state, grade_letter, timestamp, base_dir="traces"):
@@ -244,7 +256,11 @@ def generate_question_id(question: str) -> str:
     ]  # First 16 chars of hash is sufficient
 
 
-async def evaluate_questions_async(questions_df: pd.DataFrame, policy_type: str) -> list:
+async def evaluate_questions_async(
+    questions_df: pd.DataFrame,
+    policy_type: str,
+    policy_args: dict[str, Any] | None,
+) -> list:
     """Evaluate questions and return results."""
     sem = Semaphore(MAX_CONCURRENT_TASKS)
     results = []
@@ -269,7 +285,12 @@ async def evaluate_questions_async(questions_df: pd.DataFrame, policy_type: str)
                 start_time = time.time()
                 try:
                     predicted_answer, _ = await asyncio.wait_for(
-                        run_policy_async(problem, policy_type), timeout=300
+                        run_policy_async(
+                            question=problem,
+                            policy_type=policy_type,
+                            policy_args=policy_args,
+                        ),
+                        timeout=300,
                     )
                     latency = time.time() - start_time
                     grade_letter = grade_sample(problem, answer, predicted_answer)
@@ -384,15 +405,30 @@ def analyze_results(results_file: Path):
     return df
 
 
-async def compare_policies_async(policy1: str, policy2: str, num_samples: int, seed: int) -> None:
+async def compare_policies_async(
+    policy1: str,
+    policy1_args: dict[str, Any] | None,
+    policy2: str,
+    policy2_args: dict[str, Any] | None,
+    num_samples: int,
+    seed: int,
+) -> None:
     """Compare two policies on the same set of questions."""
     questions_df = sample_questions(n=num_samples, seed=seed)
 
     print(f"\nEvaluating {policy1}...")
-    results1 = await evaluate_questions_async(questions_df, policy1)
+    results1 = await evaluate_questions_async(
+        questions_df=questions_df,
+        policy_type=policy1,
+        policy_args=policy1_args,
+    )
 
     print(f"\nEvaluating {policy2}...")
-    results2 = await evaluate_questions_async(questions_df, policy2)
+    results2 = await evaluate_questions_async(
+        questions_df=questions_df,
+        policy_type=policy2,
+        policy_args=policy2_args,
+    )
 
     metrics1 = calculate_metrics(results1)
     metrics2 = calculate_metrics(results2)
@@ -460,9 +496,21 @@ if __name__ == "__main__":
         help="First (or only) policy to evaluate",
     )
     parser.add_argument(
+        "--policy1-args",
+        type=str,
+        default="{}",
+        help="Additional arguments for the first policy in JSON format",
+    )
+    parser.add_argument(
         "--policy2",
         choices=["linkup", "linkup_standard", "tavily"],
         help="Second policy to compare against (only in compare mode)",
+    )
+    parser.add_argument(
+        "--policy2-args",
+        type=str,
+        default="{}",
+        help="Additional arguments for the second policy in JSON format",
     )
     parser.add_argument(
         "--num-samples",
@@ -485,7 +533,11 @@ if __name__ == "__main__":
                 if not args.policy1:
                     parser.error("--policy1 is required for evaluate mode")
                 questions_df = sample_questions(n=args.num_samples, seed=args.seed)
-                results = await evaluate_questions_async(questions_df, args.policy1)
+                results = await evaluate_questions_async(
+                    questions_df=questions_df,
+                    policy_type=args.policy1,
+                    policy_args=json.loads(args.policy1_args),
+                )
                 metrics = calculate_metrics(results)
                 print_metrics(metrics, args.policy1)
             else:  # compare mode
@@ -493,7 +545,9 @@ if __name__ == "__main__":
                     parser.error("Both --policy1 and --policy2 are required for compare mode")
                 await compare_policies_async(
                     policy1=args.policy1,
+                    policy1_args=json.loads(args.policy1_args),
                     policy2=args.policy2,
+                    policy2_args=json.loads(args.policy2_args),
                     num_samples=args.num_samples,
                     seed=args.seed,
                 )
