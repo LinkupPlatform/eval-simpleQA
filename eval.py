@@ -18,6 +18,7 @@ from typing import Tuple, Dict, Optional, Any
 import pandas as pd
 from tqdm import tqdm
 
+from clients._perplexity import PerplexityClient
 from grader import grade_sample
 from linkup import LinkupClient
 from tavily import TavilyClient
@@ -90,7 +91,7 @@ async def run_tavily_policy(question: str) -> Tuple[str, None]:
         )
         return result, None
 
-async def run_perplexity_sonar_pro_policy(question: str) -> Tuple[str, None]:
+async def run_perplexity_policy(question: str) -> Tuple[str, None]:
     """Run perplexity sonar pro policy in a thread to avoid blocking."""
     def get_perplexity_response(_question: str) -> str:
         url = "https://api.perplexity.ai/chat/completions"
@@ -113,7 +114,7 @@ async def run_perplexity_sonar_pro_policy(question: str) -> Tuple[str, None]:
     with ThreadPoolExecutor() as pool:
         result = await loop.run_in_executor(
             pool,
-            lambda: get_perplexity_response(question)
+            lambda: PerplexityClient(api_key=perplexity_api_key).search(question)
         )
         return result, None
 
@@ -123,7 +124,7 @@ async def run_policy_async(question: str, policy_type: str = "linkup") -> Tuple[
         "tavily": run_tavily_policy,
         "linkup": run_linkup_policy,
         "linkup_standard": run_linkup_standard_policy,
-        "perplexity_sonar_pro": run_perplexity_sonar_pro_policy,
+        "perplexity": run_perplexity_policy,
     }
     
     if policy_type not in policy_handlers:
@@ -462,9 +463,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Evaluate and compare QA policies')
     parser.add_argument('--mode', choices=['evaluate', 'compare'], required=True,
                       help='Mode of operation: evaluate a single policy or compare two policies')
-    parser.add_argument('--policy1', choices=['linkup', 'linkup_standard', 'tavily'],
+    parser.add_argument('--policy1', choices=['linkup', 'linkup_standard', 'tavily', 'perplexity'],
                       help='First (or only) policy to evaluate')
-    parser.add_argument('--policy2', choices=['linkup', 'linkup_standard', 'tavily'],
+    parser.add_argument('--policy2', choices=['linkup', 'linkup_standard', 'tavily', 'perplexity'],
                       help='Second policy to compare against (only in compare mode)')
     parser.add_argument('--num-samples', type=int,
                       help='Number of samples to evaluate (if not specified, uses complete dataset)')
