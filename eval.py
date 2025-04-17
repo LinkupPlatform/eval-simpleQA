@@ -7,7 +7,6 @@ import sys
 import threading
 import time
 import traceback
-import requests
 
 from asyncio import Semaphore
 from concurrent.futures import ThreadPoolExecutor
@@ -17,6 +16,8 @@ from typing import Any, Dict, Optional, Tuple
 
 import pandas as pd
 from dotenv import load_dotenv
+
+from clients._perplexity import PerplexityClient
 from grader import grade_sample
 from linkup import LinkupClient
 from tavily import TavilyClient
@@ -59,7 +60,8 @@ async def run_linkup_policy(
     question: str,
     policy_args: dict[str, Any] | None,
 ) -> Tuple[str, None]:
-    """Run linkup policy in a thread to avoid blocking."""
+    """Run linkup policy in a thread to avoid blocking.
+    Set parameters api_key="LOCAL_API_KEY", base_url='LOCALHOST' for local testing."""
     loop = asyncio.get_event_loop()
     with ThreadPoolExecutor() as pool:
         result = await loop.run_in_executor(
@@ -102,8 +104,8 @@ async def run_tavily_policy(
         )
         return result, None
 
-async def run_perplexity_sonar_pro_policy(question: str,
-    policy_args: dict[str, Any] | None,) -> Tuple[str, None]:
+
+async def run_perplexity_policy(question: str) -> Tuple[str, None]:
     """Run perplexity sonar pro policy in a thread to avoid blocking."""
     def get_perplexity_response(_question: str) -> str:
         url = "https://api.perplexity.ai/chat/completions"
@@ -126,7 +128,7 @@ async def run_perplexity_sonar_pro_policy(question: str,
     with ThreadPoolExecutor() as pool:
         result = await loop.run_in_executor(
             pool,
-            lambda: get_perplexity_response(question)
+            lambda: PerplexityClient(api_key=perplexity_api_key).search(question)
         )
         return result, None
 
@@ -141,7 +143,7 @@ async def run_policy_async(
         "tavily": run_tavily_policy,
         "linkup": run_linkup_policy,
         "linkup_standard": run_linkup_standard_policy,
-        "perplexity_sonar_pro": run_perplexity_sonar_pro_policy,
+        "perplexity": run_perplexity_policy,
     }
     if policy_type not in policy_handlers:
         raise ValueError(f"Unknown policy type: {policy_type}")
@@ -524,7 +526,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--policy1",
-        choices=["linkup", "linkup_standard", "tavily"],
+        choices=["linkup", "linkup_standard", "tavily", "perplexity"],
         help="First (or only) policy to evaluate",
     )
     parser.add_argument(
@@ -535,7 +537,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--policy2",
-        choices=["linkup", "linkup_standard", "tavily"],
+        choices=["linkup", "linkup_standard", "tavily", "perplexity"],
         help="Second policy to compare against (only in compare mode)",
     )
     parser.add_argument(
