@@ -7,6 +7,8 @@ import sys
 import threading
 import time
 import traceback
+import requests
+
 from asyncio import Semaphore
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
@@ -24,6 +26,7 @@ load_dotenv()
 
 linkup_api_key = os.getenv("LINKUP_API_KEY")
 tavily_api_key = os.getenv("TAVILY_API_KEY")
+perplexity_api_key = os.getenv("PERPLEXITY_API_KEY")
 
 
 def get_data():
@@ -99,6 +102,34 @@ async def run_tavily_policy(
         )
         return result, None
 
+async def run_perplexity_sonar_pro_policy(question: str,
+    policy_args: dict[str, Any] | None,) -> Tuple[str, None]:
+    """Run perplexity sonar pro policy in a thread to avoid blocking."""
+    def get_perplexity_response(_question: str) -> str:
+        url = "https://api.perplexity.ai/chat/completions"
+        payload = {
+            "model": "sonar-pro",
+            "messages": [
+                {"role": "user", "content": _question}
+            ],
+            "max_tokens": 500
+        }
+        headers = {
+            "Authorization": f"Bearer {perplexity_api_key}",
+            "Content-Type": "application/json"
+        }
+        _response = requests.post(url, json=payload, headers=headers)
+        _result = _response.json()
+        return _result["choices"][0]["message"]["content"]
+
+    loop = asyncio.get_event_loop()
+    with ThreadPoolExecutor() as pool:
+        result = await loop.run_in_executor(
+            pool,
+            lambda: get_perplexity_response(question)
+        )
+        return result, None
+
 
 async def run_policy_async(
     question: str,
@@ -110,6 +141,7 @@ async def run_policy_async(
         "tavily": run_tavily_policy,
         "linkup": run_linkup_policy,
         "linkup_standard": run_linkup_standard_policy,
+        "perplexity_sonar_pro": run_perplexity_sonar_pro_policy,
     }
     if policy_type not in policy_handlers:
         raise ValueError(f"Unknown policy type: {policy_type}")
