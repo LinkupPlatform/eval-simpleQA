@@ -105,30 +105,18 @@ async def run_tavily_policy(
         return result, None
 
 
-async def run_perplexity_policy(question: str) -> Tuple[str, None]:
+async def run_perplexity_policy(
+        question: str,
+        policy_args: dict[str, Any] | None,
+) -> Tuple[str, None]:
     """Run perplexity sonar pro policy in a thread to avoid blocking."""
-    def get_perplexity_response(_question: str) -> str:
-        url = "https://api.perplexity.ai/chat/completions"
-        payload = {
-            "model": "sonar-pro",
-            "messages": [
-                {"role": "user", "content": _question}
-            ],
-            "max_tokens": 500
-        }
-        headers = {
-            "Authorization": f"Bearer {perplexity_api_key}",
-            "Content-Type": "application/json"
-        }
-        _response = requests.post(url, json=payload, headers=headers)
-        _result = _response.json()
-        return _result["choices"][0]["message"]["content"]
-
     loop = asyncio.get_event_loop()
     with ThreadPoolExecutor() as pool:
         result = await loop.run_in_executor(
             pool,
-            lambda: PerplexityClient(api_key=perplexity_api_key).search(question)
+            lambda: PerplexityClient(api_key=perplexity_api_key, **policy_args or dict()).search(
+                question
+            ),
         )
         return result, None
 
