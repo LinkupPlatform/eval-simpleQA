@@ -4,9 +4,6 @@ import requests
 
 
 class PerplexityClient:
-    """
-    Client for the Perplexity API.
-    """
 
     def __init__(self, api_key: Optional[str] = None,
                  base_url: str = "https://api.perplexity.ai/chat/completions"):
@@ -29,6 +26,6 @@ class PerplexityClient:
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
         }
-        _response = requests.post(self.base_url, json=payload, headers=headers)
-        _result = _response.json()
-        return _result["choices"][0]["message"]["content"]
+        response = requests.post(self.base_url, json=payload, headers=headers)
+        result = response.json()
+        return result["choices"][0]["message"]["content"]

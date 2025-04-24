@@ -17,7 +17,7 @@ from typing import Any, Dict, Optional, Tuple
 import pandas as pd
 from dotenv import load_dotenv
 
-from clients._perplexity import PerplexityClient
+from clients.perplexity_ import PerplexityClient
 from grader import grade_sample
 from linkup import LinkupClient
 from tavily import TavilyClient
