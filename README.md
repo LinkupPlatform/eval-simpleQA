@@ -1,17 +1,21 @@
 # SimpleQA Evaluator
 
-A tool for evaluating and comparing different Question Answering (QA) policies on OpenAI's SimpleQA benchmark, measuring metrics like f-score, accuracy, and latency.
+A tool for evaluating and comparing different Question Answering (QA) policies on OpenAI's SimpleQA 
+benchmark, measuring metrics like f-score, accuracy, and latency.
 
 ## Features
 
-The evaluator provides comprehensive testing capabilities for AI search engines including Linkup Deep, Linkup Standard, and Tavily APIs. It supports both single-policy evaluation and head-to-head comparisons, with built-in async processing and progress tracking.
+The evaluator provides comprehensive testing capabilities for AI search engines including Linkup Deep, 
+Linkup Standard, Tavily and Perplexity APIs. 
+It supports both single-policy evaluation and head-to-head comparisons, with built-in async processing 
+and progress tracking.
 
 ## Setup
 
 1. Install dependencies:
 
 ```bash
-pip install pandas tqdm python-dotenv linkup-sdk tavily-python openai
+pip install pandas tqdm python-dotenv linkup-sdk tavily-python openai requests
 ```
 
 2. Create a `.env` file with your API keys:
@@ -19,6 +23,7 @@ pip install pandas tqdm python-dotenv linkup-sdk tavily-python openai
 LINKUP_API_KEY=your_linkup_key
 TAVILY_API_KEY=your_tavily_key
 OPENAI_API_KEY=your_openai_key
+PERPLEXITY_API_KEY=your_perplexity_key
 ```
 
 3. Ensure you have the `simple_qa_test_set.csv` file containing the SimpleQA benchmark in your project directory.
@@ -47,6 +52,7 @@ The evaluator currently supports three QA policies:
 - Linkup API (deep search mode)
 - Linkup API (standard search mode)
 - Tavily API (advanced search mode)
+- Perplexity API (you can specify desired model)
 
 ## Output and Metrics
 

@@ -7,6 +7,7 @@ import sys
 import threading
 import time
 import traceback
+
 from asyncio import Semaphore
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
@@ -15,15 +16,14 @@ from typing import Any, Dict, Optional, Tuple
 
 import pandas as pd
 from dotenv import load_dotenv
+
+from clients.perplexity_ import PerplexityClient
 from grader import grade_sample
 from linkup import LinkupClient
 from tavily import TavilyClient
 from tqdm import tqdm
 
 load_dotenv()
-
-linkup_api_key = os.getenv("LINKUP_API_KEY")
-tavily_api_key = os.getenv("TAVILY_API_KEY")
 
 
 def get_data():
@@ -53,15 +53,17 @@ def print_log(policy_type: str, message: str):
 
 
 async def run_linkup_policy(
-    question: str,
-    policy_args: dict[str, Any] | None,
+        question: str,
+        policy_args: dict[str, Any] | None,
 ) -> Tuple[str, None]:
-    """Run linkup policy in a thread to avoid blocking."""
+    """Run linkup policy in a thread to avoid blocking.
+    Provide policy_args for local run as follows:
+    policy_args = {"api_key": 'LOCAL_API_KEY', "base_url": 'LOCAL_BASE_URL'}"""
     loop = asyncio.get_event_loop()
     with ThreadPoolExecutor() as pool:
         result = await loop.run_in_executor(
             pool,
-            lambda: LinkupClient(api_key=linkup_api_key, **policy_args or dict())
+            lambda: LinkupClient(**policy_args or dict())
             .search(question, depth="deep", output_type="sourcedAnswer")
             .answer,
         )
@@ -69,15 +71,15 @@ async def run_linkup_policy(
 
 
 async def run_linkup_standard_policy(
-    question: str,
-    policy_args: dict[str, Any] | None,
+        question: str,
+        policy_args: dict[str, Any] | None,
 ) -> Tuple[str, None]:
     """Run linkup policy in a thread to avoid blocking."""
     loop = asyncio.get_event_loop()
     with ThreadPoolExecutor() as pool:
         result = await loop.run_in_executor(
             pool,
-            lambda: LinkupClient(api_key=linkup_api_key, **policy_args or dict())
+            lambda: LinkupClient(**policy_args or dict())
             .search(question, depth="standard", output_type="sourcedAnswer")
             .answer,
         )
@@ -85,31 +87,48 @@ async def run_linkup_standard_policy(
 
 
 async def run_tavily_policy(
-    question: str,
-    policy_args: dict[str, Any] | None,
+        question: str,
+        policy_args: dict[str, Any] | None,
 ) -> Tuple[str, None]:
     """Run tavily policy in a thread to avoid blocking."""
     loop = asyncio.get_event_loop()
     with ThreadPoolExecutor() as pool:
         result = await loop.run_in_executor(
             pool,
-            lambda: TavilyClient(api_key=tavily_api_key, **policy_args or dict()).search(
+            lambda: TavilyClient(**policy_args or dict()).search(
                 question, search_depth="advanced", include_answer=True
             )["answer"],
         )
         return result, None
 
 
+async def run_perplexity_policy(
+        question: str,
+        policy_args: dict[str, Any] | None,
+) -> Tuple[str, None]:
+    """Run perplexity sonar pro policy in a thread to avoid blocking."""
+    loop = asyncio.get_event_loop()
+    with ThreadPoolExecutor() as pool:
+        result = await loop.run_in_executor(
+            pool,
+            lambda: PerplexityClient(**policy_args or dict()).search(
+                question
+            ),
+        )
+        return result, None
+
+
 async def run_policy_async(
-    question: str,
-    policy_type: str = "linkup",
-    policy_args: dict[str, Any] | None = None,
+        question: str,
+        policy_type: str = "linkup",
+        policy_args: dict[str, Any] | None = None,
 ) -> Tuple[str, Optional[Any]]:
     """Async version of run_policy."""
     policy_handlers = {
         "tavily": run_tavily_policy,
         "linkup": run_linkup_policy,
         "linkup_standard": run_linkup_standard_policy,
+        "perplexity": run_perplexity_policy,
     }
     if policy_type not in policy_handlers:
         raise ValueError(f"Unknown policy type: {policy_type}")
@@ -138,10 +157,10 @@ def calculate_f_score(metrics: Dict[str, float]) -> float:
     """
     if (metrics["accuracy_given_attempted"] + metrics["is_correct"]) > 0:
         return (
-            2
-            * metrics["accuracy_given_attempted"]
-            * metrics["is_correct"]
-            / (metrics["accuracy_given_attempted"] + metrics["is_correct"])
+                2
+                * metrics["accuracy_given_attempted"]
+                * metrics["is_correct"]
+                / (metrics["accuracy_given_attempted"] + metrics["is_correct"])
         )
     return 0.0
 
@@ -252,14 +271,14 @@ async def compare_policies(policy1: str, policy2: str, num_samples: int):
 def generate_question_id(question: str) -> str:
     """Generate a unique, deterministic ID for a question."""
     return hashlib.sha256(question.encode()).hexdigest()[
-        :16
-    ]  # First 16 chars of hash is sufficient
+           :16
+           ]  # First 16 chars of hash is sufficient
 
 
 async def evaluate_questions_async(
-    questions_df: pd.DataFrame,
-    policy_type: str,
-    policy_args: dict[str, Any] | None,
+        questions_df: pd.DataFrame,
+        policy_type: str,
+        policy_args: dict[str, Any] | None,
 ) -> list:
     """Evaluate questions and return results."""
     sem = Semaphore(MAX_CONCURRENT_TASKS)
@@ -406,12 +425,12 @@ def analyze_results(results_file: Path):
 
 
 async def compare_policies_async(
-    policy1: str,
-    policy1_args: dict[str, Any] | None,
-    policy2: str,
-    policy2_args: dict[str, Any] | None,
-    num_samples: int,
-    seed: int,
+        policy1: str,
+        policy1_args: dict[str, Any] | None,
+        policy2: str,
+        policy2_args: dict[str, Any] | None,
+        num_samples: int,
+        seed: int,
 ) -> None:
     """Compare two policies on the same set of questions."""
     questions_df = sample_questions(n=num_samples, seed=seed)
@@ -492,7 +511,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--policy1",
-        choices=["linkup", "linkup_standard", "tavily"],
+        choices=["linkup", "linkup_standard", "tavily", "perplexity"],
         help="First (or only) policy to evaluate",
     )
     parser.add_argument(
@@ -503,7 +522,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--policy2",
-        choices=["linkup", "linkup_standard", "tavily"],
+        choices=["linkup", "linkup_standard", "tavily", "perplexity"],
         help="Second policy to compare against (only in compare mode)",
     )
     parser.add_argument(
@@ -526,6 +545,7 @@ if __name__ == "__main__":
     parser.add_argument("--analyze", type=str, help="Path to results file to analyze")
 
     args = parser.parse_args()
+
 
     async def main():
         try:
@@ -558,6 +578,7 @@ if __name__ == "__main__":
             print(f"\nUnexpected error: {str(e)}")
             traceback.print_exc()
             sys.exit(1)
+
 
     if args.analyze:
         # Analyze existing results
