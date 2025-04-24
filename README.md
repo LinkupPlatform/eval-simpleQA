@@ -23,7 +23,7 @@ pip install pandas tqdm python-dotenv linkup-sdk tavily-python openai requests
 LINKUP_API_KEY=your_linkup_key
 TAVILY_API_KEY=your_tavily_key
 OPENAI_API_KEY=your_openai_key
-PERPLEXITY_API_KEY=you_perplexity_key
+PERPLEXITY_API_KEY=your_perplexity_key
 ```
 
 3. Ensure you have the `simple_qa_test_set.csv` file containing the SimpleQA benchmark in your project directory.
