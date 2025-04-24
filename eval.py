@@ -61,7 +61,8 @@ async def run_linkup_policy(
     policy_args: dict[str, Any] | None,
 ) -> Tuple[str, None]:
     """Run linkup policy in a thread to avoid blocking.
-    Set parameters api_key="LOCAL_API_KEY", base_url='LOCALHOST' for local testing."""
+    Provide policy_args for local run as follows:
+    policy_args = {"api_key": 'LOCAL_API_KEY', "base_url": 'LOCAL_BASE_URL'}"""
     loop = asyncio.get_event_loop()
     with ThreadPoolExecutor() as pool:
         result = await loop.run_in_executor(
