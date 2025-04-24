@@ -25,10 +25,6 @@ from tqdm import tqdm
 
 load_dotenv()
 
-linkup_api_key = os.getenv("LINKUP_API_KEY")
-tavily_api_key = os.getenv("TAVILY_API_KEY")
-perplexity_api_key = os.getenv("PERPLEXITY_API_KEY")
-
 
 def get_data():
     df = pd.read_csv("simple_qa_test_set.csv")
@@ -67,7 +63,7 @@ async def run_linkup_policy(
     with ThreadPoolExecutor() as pool:
         result = await loop.run_in_executor(
             pool,
-            lambda: LinkupClient(api_key=linkup_api_key, **policy_args or dict())
+            lambda: LinkupClient(**policy_args or dict())
             .search(question, depth="deep", output_type="sourcedAnswer")
             .answer,
         )
@@ -83,7 +79,7 @@ async def run_linkup_standard_policy(
     with ThreadPoolExecutor() as pool:
         result = await loop.run_in_executor(
             pool,
-            lambda: LinkupClient(api_key=linkup_api_key, **policy_args or dict())
+            lambda: LinkupClient(**policy_args or dict())
             .search(question, depth="standard", output_type="sourcedAnswer")
             .answer,
         )
@@ -99,7 +95,7 @@ async def run_tavily_policy(
     with ThreadPoolExecutor() as pool:
         result = await loop.run_in_executor(
             pool,
-            lambda: TavilyClient(api_key=tavily_api_key, **policy_args or dict()).search(
+            lambda: TavilyClient(**policy_args or dict()).search(
                 question, search_depth="advanced", include_answer=True
             )["answer"],
         )
@@ -115,7 +111,7 @@ async def run_perplexity_policy(
     with ThreadPoolExecutor() as pool:
         result = await loop.run_in_executor(
             pool,
-            lambda: PerplexityClient(api_key=perplexity_api_key, **policy_args or dict()).search(
+            lambda: PerplexityClient(**policy_args or dict()).search(
                 question
             ),
         )
